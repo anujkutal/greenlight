@@ -45,7 +45,7 @@ type TokenModel struct {
 	DB *sql.DB
 }
 
-func (m TokenModel) New(userID int, ttl time.Duration, scope string) (*Token, error) {
+func (m TokenModel) New(userID int64, ttl time.Duration, scope string) (*Token, error) {
 	token := generateToken(int64(userID), ttl, scope)
 
 	err := m.Insert(token)
