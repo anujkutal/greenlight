@@ -56,7 +56,7 @@ func (app *application) failedValidationResponse(w http.ResponseWriter, r *http.
 	app.errorResponse(w, r, http.StatusUnprocessableEntity, errors)
 }
 
-// editConflictResponse sends a 409 conflict response.
+// editConflictResponse sends a 409 conflict when concurrent updates occur.
 func (app *application) editConflictResponse(w http.ResponseWriter, r *http.Request) {
 	msg := "unable to update the record due to an edit conflict, please try again"
 	app.errorResponse(w, r, http.StatusConflict, msg)
@@ -68,8 +68,16 @@ func (app *application) rateLimitExceededResponse(w http.ResponseWriter, r *http
 	app.errorResponse(w, r, http.StatusTooManyRequests, msg)
 }
 
-// invalidCredentialsResponse sends 401 unauthorized response.
+// invalidCredentialsResponse sends a 401 unauthorized response.
 func (app *application) invalidCredentialsResponse(w http.ResponseWriter, r *http.Request) {
 	msg := "invalid authentication credentials"
+	app.errorResponse(w, r, http.StatusUnauthorized, msg)
+}
+
+// invalidAuthenticationTokenResponse returns 401 for missing or invalid token.
+func (app *application) invalidAuthenticationTokenResponse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("WWW-Authenticate", "Bearer")
+
+	msg := "invalid or missing authentication token"
 	app.errorResponse(w, r, http.StatusUnauthorized, msg)
 }
