@@ -22,7 +22,6 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 				app.serverErrorResponse(w, r, fmt.Errorf("%s", err))
 			}
 		}()
-
 		next.ServeHTTP(w, r)
 	})
 }
@@ -38,20 +37,16 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 		clients = make(map[string]*client)
 	)
 
-	// Background goroutine which removes old entries from the clients map once
-	// every minute.
+	// Cleanup stale clients every minute.
 	go func() {
 		for {
 			time.Sleep(time.Minute)
-
 			mu.Lock()
-
 			for ip, client := range clients {
 				if time.Since(client.lastSeen) > 3*time.Minute {
 					delete(clients, ip)
 				}
 			}
-
 			mu.Unlock()
 		}
 	}()
@@ -61,13 +56,11 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 			ip := realip.FromRequest(r)
 
 			mu.Lock()
-
 			if _, found := clients[ip]; !found {
 				clients[ip] = &client{
 					limiter: rate.NewLimiter(rate.Limit(app.config.limiter.rps), app.config.limiter.burst),
 				}
 			}
-
 			clients[ip].lastSeen = time.Now()
 
 			if !clients[ip].limiter.Allow() {
@@ -75,10 +68,8 @@ func (app *application) rateLimit(next http.Handler) http.Handler {
 				app.rateLimitExceededResponse(w, r)
 				return
 			}
-
 			mu.Unlock()
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }
@@ -87,24 +78,21 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Vary", "Authorization")
 
-		authorizationHeader := r.Header.Get("Authorization")
-
-		if authorizationHeader == "" {
+		authHeader := r.Header.Get("Authorization")
+		if authHeader == "" {
 			r = app.contextSetUser(r, data.AnonymousUser)
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		headerParts := strings.Split(authorizationHeader, " ")
-		if len(headerParts) != 2 {
+		parts := strings.Split(authHeader, " ")
+		if len(parts) != 2 {
 			app.invalidAuthenticationTokenResponse(w, r)
 			return
 		}
-
-		token := headerParts[1]
+		token := parts[1]
 
 		v := validator.New()
-
 		if data.ValidateTokenPlaintext(v, token); !v.Valid() {
 			app.invalidAuthenticationTokenResponse(w, r)
 			return
@@ -120,9 +108,7 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 			}
 			return
 		}
-
 		r = app.contextSetUser(r, user)
-
 		next.ServeHTTP(w, r)
 	})
 }
@@ -130,12 +116,10 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
-
 		if user.IsAnonymous() {
 			app.authenticationRequiredResponse(w, r)
 			return
 		}
-
 		next.ServeHTTP(w, r)
 	})
 }
@@ -143,14 +127,11 @@ func (app *application) requireAuthenticatedUser(next http.HandlerFunc) http.Han
 func (app *application) requireActivatedUser(next http.HandlerFunc) http.HandlerFunc {
 	fn := func(w http.ResponseWriter, r *http.Request) {
 		user := app.contextGetUser(r)
-
 		if !user.Activated {
 			app.inactiveAccountResponse(w, r)
 			return
 		}
-
 		next.ServeHTTP(w, r)
 	}
-
 	return app.requireAuthenticatedUser(fn)
 }

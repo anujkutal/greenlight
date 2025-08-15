@@ -136,7 +136,6 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 		&user.Activated,
 		&user.Version,
 	)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
@@ -211,7 +210,6 @@ func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 		&user.Activated,
 		&user.Version,
 	)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):

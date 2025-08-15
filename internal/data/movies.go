@@ -80,7 +80,6 @@ func (m MovieModel) Get(id int64) (*Movie, error) {
 		pq.Array(&movie.Genres),
 		&movie.Version,
 	)
-
 	if err != nil {
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
